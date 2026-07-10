@@ -1,0 +1,7 @@
+streamlit
+streamlit-folium
+earthengine-api
+geemap
+numpy
+matplotlib
+folium
