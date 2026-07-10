@@ -17,6 +17,7 @@
 import streamlit as st
 import ee
 import json
+import base64
 import numpy as np
 import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
@@ -42,12 +43,15 @@ if not st.session_state.ee_ready:
     # لازم تضيف بيانات الـ Service Account في: Settings > Secrets بصفحة التطبيق
     # ==========================================================================
     try:
-        service_account_info = dict(st.secrets["gee_service_account"])
+        # قراءة الملف كامل كنص Base64 واحد (بدون أي مشاكل تنسيق TOML/newlines)
+        b64_data = st.secrets["gee_service_account_b64"]
+        json_str = base64.b64decode(b64_data).decode("utf-8")
+        service_account_info = json.loads(json_str)
         project_id = service_account_info["project_id"]
 
         credentials = ee.ServiceAccountCredentials(
             service_account_info["client_email"],
-            key_data=json.dumps(service_account_info)
+            key_data=json_str
         )
         ee.Initialize(credentials, project=project_id)
 
@@ -59,7 +63,7 @@ if not st.session_state.ee_ready:
         st.error(
             "❌ لسه معملتش إعداد الـ Service Account.\n\n"
             "روح لصفحة التطبيق على share.streamlit.io → ⋮ (النقط التلاتة) → Settings → Secrets، "
-            "وضيف بيانات حساب الخدمة (Service Account) بصيغة TOML."
+            "وضيف السطر: gee_service_account_b64 = \"...\""
         )
         st.stop()
     except Exception as e:
