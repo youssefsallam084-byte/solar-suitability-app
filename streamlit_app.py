@@ -34,37 +34,37 @@ if "ee_ready" not in st.session_state:
 
 if not st.session_state.ee_ready:
     st.title("🌍 منصة تحليل الزحف العمراني ومواقع الطاقة الشمسية")
-    st.markdown("### 🔑 خطوة أولى: اربط حسابك في Google Earth Engine")
-    st.info(
-        "اكتب اسم الـ Project ID بتاع مشروعك في Google Earth Engine. "
-        "لو معندكش مشروع، اعمل واحد مجانًا من [هنا](https://code.earthengine.google.com/register)."
-    )
+    st.markdown("### 🔑 جاري الاتصال بـ Google Earth Engine تلقائيًا...")
 
-    project_id = st.text_input("Project ID بتاعك:", placeholder="مثال: my-solar-project-2026")
+    # ==========================================================================
+    # الاتصال عبر Service Account (بيانات محفوظة في Streamlit Secrets)
+    # ده بيشتغل تلقائيًا على السيرفر من غير أي نافذة تسجيل دخول أو انتظار
+    # لازم تضيف بيانات الـ Service Account في: Settings > Secrets بصفحة التطبيق
+    # ==========================================================================
+    try:
+        service_account_info = dict(st.secrets["gee_service_account"])
+        project_id = service_account_info["project_id"]
 
-    if st.button("🚀 اتصال وبدء المنصة", type="primary"):
-        if not project_id.strip():
-            st.error("من فضلك اكتب اسم المشروع الأول.")
-        else:
-            with st.spinner("جاري الاتصال بـ Google Earth Engine..."):
-                try:
-                    ee.Initialize(project=project_id.strip())
-                    st.session_state.ee_ready = True
-                    st.session_state.project_id = project_id.strip()
-                    st.rerun()
-                except Exception:
-                    try:
-                        ee.Authenticate()
-                        ee.Initialize(project=project_id.strip())
-                        st.session_state.ee_ready = True
-                        st.session_state.project_id = project_id.strip()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(
-                            "❌ فشل الاتصال. تأكد إن المشروع ده مسجّل في Earth Engine "
-                            f"وإن حسابك عنده صلاحية عليه.\n\nتفاصيل الخطأ: {e}"
-                        )
-    st.stop()
+        credentials = ee.ServiceAccountCredentials(
+            service_account_info["client_email"],
+            key_data=json.dumps(service_account_info)
+        )
+        ee.Initialize(credentials, project=project_id)
+
+        st.session_state.ee_ready = True
+        st.session_state.project_id = project_id
+        st.rerun()
+
+    except KeyError:
+        st.error(
+            "❌ لسه معملتش إعداد الـ Service Account.\n\n"
+            "روح لصفحة التطبيق على share.streamlit.io → ⋮ (النقط التلاتة) → Settings → Secrets، "
+            "وضيف بيانات حساب الخدمة (Service Account) بصيغة TOML."
+        )
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ فشل الاتصال بـ Google Earth Engine.\n\nتفاصيل الخطأ: {e}")
+        st.stop()
 
 # ==============================================================================
 # دوال التحليل الأساسية (نفس منطق النسخة السابقة + إصلاح توقع 2030)
